@@ -13,7 +13,7 @@ cred_dict = json.loads(cred_json)
 if not firebase_admin._apps:
     cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred, {
-        "databaseURL": "https://denuncias-48660-default-rtdb.firebaseio.com"
+        "databaseURL": "https://denuncias-48660-default-rtdb.firebaseio.com/"
     })
 
 # Referência do banco
