@@ -2,11 +2,18 @@ import streamlit as st
 import os
 import json
 import base64
+import pandas as pd
+from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, db
 
-# Lê o JSON de credenciais do segredo codificado
-cred_json = base64.b64decode(os.environ["firebase_credentials"]).decode("utf-8")
+# Verificar e carregar o segredo Firebase
+firebase_credentials_base64 = os.getenv("firebase_credentials")
+if firebase_credentials_base64 is None:
+    st.error("Credenciais do Firebase não encontradas. Verifique as configurações do ambiente.")
+    st.stop()
+
+cred_json = base64.b64decode(firebase_credentials_base64).decode("utf-8")
 cred_dict = json.loads(cred_json)
 
 # Inicializa o Firebase
@@ -19,11 +26,11 @@ if not firebase_admin._apps:
 # Referência do banco
 ref = db.reference("/denuncias")
 
-# Página
+# Configuração da Página
 st.set_page_config(page_title="Sistema de Denúncias Epidemiológicas", layout="wide")
 st.title("🦟 Sistema de Denúncias Epidemiológicas")
 
-# Formulário
+# Formulário de Nova Denúncia
 with st.form("denuncia_form"):
     st.subheader("📋 Registrar nova denúncia")
 
@@ -73,12 +80,14 @@ with st.form("denuncia_form"):
         ref.push(dados)
         st.success(f"✅ Denúncia registrada com sucesso! Protocolo: {protocolo}")
 
-# Busca por protocolo
+# Divisor
 st.divider()
+
+# Seção de Busca por Protocolo
 st.subheader("🔍 Buscar por número de protocolo")
 protocolo_busca = st.text_input("Digite o número do protocolo")
 
-# Dados
+# Buscar Dados
 dados = ref.get()
 if dados:
     df = pd.DataFrame(dados.values())
@@ -86,7 +95,7 @@ if dados:
     if protocolo_busca:
         df = df[df["protocolo"].astype(str).str.contains(protocolo_busca, case=False, na=False)]
 
-    # Garantir colunas
+    # Garantir que todas as colunas existem
     colunas_ordenadas = [
         "protocolo", "data", "bairro", "rua", "numero", "cep", "tipo", "descricao",
         "data_atendimento", "status", "relatorio"
@@ -97,12 +106,12 @@ if dados:
 
     df = df[colunas_ordenadas]
 
-    # Converter a coluna de data de atendimento (se não estiver vazia)
+    # Converter coluna de data de atendimento
     df["data_atendimento"] = pd.to_datetime(df["data_atendimento"], errors="coerce")
 
     st.subheader("📄 Denúncias registradas")
 
-    # Editor
+    # Editor de Dados
     edited_df = st.data_editor(
         df,
         column_config={
@@ -118,14 +127,14 @@ if dados:
         key="editor"
     )
 
-    # Salvar alterações
+    # Botão para Salvar Alterações
     if st.button("💾 Salvar alterações"):
-        dados_atualizados = ref.get()  # Pega os dados mais atualizados do Firebase
+        dados_atualizados = ref.get()  # Busca dados atualizados do Firebase
 
         for i, row in edited_df.iterrows():
             protocolo = str(row.get("protocolo", "")).strip()
             if not protocolo:
-                continue  # pula se o protocolo estiver vazio
+                continue
 
             chave_encontrada = None
             for key, valor in dados_atualizados.items():
