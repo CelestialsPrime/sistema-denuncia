@@ -1,12 +1,16 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime
+import os
+import json
+import base64
 import firebase_admin
 from firebase_admin import credentials, db
 
-# Inicialização Firebase (só uma vez)
+# Lê o JSON de credenciais do segredo codificado
+cred_json = base64.b64decode(os.environ["firebase_credentials"]).decode("utf-8")
+cred_dict = json.loads(cred_json)
+
+# Inicializa o Firebase
 if not firebase_admin._apps:
-    cred = credentials.Certificate("denuncias-48660-firebase-adminsdk-fbsvc-1ba8f52e4d.json")  # Substitua pelo seu caminho
+    cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred, {
         "databaseURL": "https://denuncias-48660-default-rtdb.firebaseio.com"
     })
